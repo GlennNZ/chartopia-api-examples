@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="description" content="">
+    <meta name="author" content="">
+
+    <title>Chartopia Roll Example</title>
+
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+
+
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Lato&display=swap');
+
+.chartopia-phb h2 {
+  font-family: 'Lato', sans-serif;
+  color: #1c4364;
+  font-variant: small-caps;
+}
+
+.chartopia-phb h3 {
+  font-family: "Lato", "Helvetica Neue", Helvetica, Arial, sans-serif;
+  border-bottom: 1px solid #265986;
+  color: #265986;
+  font-variant: small-caps;
+  font-weight: normal;
+}
+
+.chartopia-phb h3 + p {
+  padding: 10px 2px 0;
+}
+
+.chartopia-phb h4 {
+  font-family: "Lato", "Helvetica Neue", Helvetica, Arial, sans-serif;
+  color: #265986;
+  font-variant: small-caps;
+  font-weight: normal;
+}
+
+.chartopia-phb p {
+  margin: 10px 0 10px;
+  line-height: 1.2em;
+}
+
+.chartopia-phb table:first-of-type {
+  text-align: center;
+  color: #1c4364;
+  margin: 10px 0px 10px 0;
+}
+
+.chartopia-phb table thead th{
+  text-align: center;
+  margin: 10px 0 2px;
+  text-transform: uppercase;
+  color: #265986;
+  border: 0;
+  padding: 0.35em;
+}
+
+.chartopia-phb table td {
+  vertical-align: middle;
+  min-width: 40px; 
+  line-height: 1em;
+  border: 0;
+  padding: 0.35em;
+}
+
+.chartopia-phb hr {
+  border-top: 1px solid #6488A8;
+}
+
+.chartopia-phb blockquote {
+  font-family: "Helvetica Neue",Helvetica,Arial,sans-serif;
+  font-size: 1.1em;
+}
+</style>
+
+<script>
+
+const API_ROOT = "https://chartopia.d12dev.com"
+
+document.addEventListener("DOMContentLoaded", function () {
+
+  document.getElementById('rollBtn').addEventListener('click', function (event) {
+    var mult = document.getElementById("mult").value;
+    mult = parseInt(mult);
+    if (mult.isNaN) {
+      mult = 1;
+    }
+
+    var chartId = document.getElementById("chartId").value
+    roll(chartId, mult);
+
+  }, false);
+});
+
+function setResultText(resultStr){
+  document.getElementById('result').innerHTML = resultStr;
+}
+
+
+function roll(chartId, mult) {
+  setResultText("loading...");
+  
+  fetch(`${API_ROOT}/api/charts/${chartId}/roll/`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Accept': 'application/json',
+    },
+    body: JSON.stringify({mult: mult})
+  })
+  .then(response => {
+      if (response.status == 403) {
+        setResultText("Chart is inaccessible");
+      }
+      else if (response.status == 404) {
+        setResultText("Chart does not exist");
+      } else if (response.status == 429) {
+          result = "Too many rolls in a short space of time."
+      } else if (response.status == 201) {
+          var resultStr = "";
+          response.json().then(data => {
+          data.results.forEach(function(result) {
+            var resultMd = marked.parse(result, { gfm: true, breaks: true });
+            resultStr += `<div>${resultMd}</div>`;
+          });
+          setResultText(resultStr);
+        });
+      } 
+      else {
+        setResultText(`Unexpected status code: ${response.status}`);
+      }
+    })
+    .catch(data => {
+      console.log("Error: ", data);
+      setResultText("Unknown error.");
+    });
+}
+
+</script>
+
+
+</head>
+
+<body>
+
+  <h1>Chartopia Roll Example</h1>
+
+  <label for="chart-id">Chart ID</label><input name="chart-id" id="chartId" value="288"/><br>
+  <label for="mult">Num results</label>
+  <select name="mult" id="mult">
+    <option value="1" selected>1</option>
+    <option value="2">2</option>
+    <option value="3">3</option>
+    <option value="4">4</option>
+    <option value="5">5</option>
+  </select></br>
+  <button id="rollBtn">
+  Roll
+  </button>
+  
+  <div id="result" class="chartopia-phb">
+  
+  </div>
+</body>
+
+</html>
